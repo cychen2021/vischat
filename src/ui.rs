@@ -52,39 +52,59 @@ fn badge_style(role: &Role) -> Style {
 }
 
 fn draw_list(frame: &mut Frame, state: &mut AppState, area: ratatui::layout::Rect) {
-    let visible = state.visible_items();
-    let selected = state.selected;
+    let all = state.list_items();
     let scroll = state.list_scroll;
+    let highlight_idx = state
+        .selected_list_index()
+        .and_then(|i| i.checked_sub(scroll));
 
-    let items: Vec<ListItem> = visible
+    let items: Vec<ListItem> = all
         .iter()
         .enumerate()
         .skip(scroll)
         .take(area.height.saturating_sub(2) as usize)
         .map(|(i, item)| {
-            let badge_span = Span::styled(format!("{:<8}", item.badge), badge_style(&item.role));
-            let summary_style = if i == selected {
+            let folded = item.role == Role::Thinking && !state.show_thinking;
+            let local_idx = i - scroll;
+            let is_selected = highlight_idx == Some(local_idx);
+
+            let b_style = if folded {
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::DIM)
+            } else {
+                badge_style(&item.role)
+            };
+            let badge_span = Span::styled(format!("{:<8}", item.badge), b_style);
+
+            let summary_text = if folded {
+                "...".to_string()
+            } else {
+                item.summary.clone()
+            };
+            let s_style = if is_selected {
                 Style::default()
                     .fg(Color::White)
                     .add_modifier(Modifier::BOLD)
+            } else if folded {
+                Style::default()
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::DIM)
             } else {
                 Style::default().fg(Color::Gray)
             };
-            let summary_span = Span::styled(item.summary.clone(), summary_style);
+            let summary_span = Span::styled(summary_text, s_style);
             ListItem::new(Line::from(vec![badge_span, summary_span]))
         })
         .collect();
 
     let mut list_state = ListState::default();
-    // The list widget selected index is relative to visible items in the widget
-    if selected >= scroll {
-        list_state.select(Some(selected - scroll));
-    }
+    list_state.select(highlight_idx);
 
     let thinking_hint = if state.show_thinking {
         " [thinking visible]"
     } else {
-        " [thinking hidden — press t]"
+        " [thinking folded — press t]"
     };
 
     let block = Block::default()
@@ -136,7 +156,7 @@ fn detail_title(item: &crate::message::DisplayItem) -> String {
 }
 
 fn draw_status(frame: &mut Frame, state: &AppState, area: ratatui::layout::Rect) {
-    let total = state.visible_count();
+    let total = state.navigable_count();
     let pos = if total == 0 {
         "0/0".to_string()
     } else {

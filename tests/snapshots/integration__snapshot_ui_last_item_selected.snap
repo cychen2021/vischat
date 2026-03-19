@@ -2,12 +2,12 @@
 source: tests/integration.rs
 expression: "render_ui(&mut state, 100, 30)"
 ---
-┌ vischat · simple.jsonl  [thinking hidden — press t]──────────────────────────────────────────────┐
+┌ vischat · simple.jsonl  [thinking folded — press t]──────────────────────────────────────────────┐
 │  [SYS]   session=test-ses model=claude-test cwd=/test tools=2                                    │
+│  [THINK] ...                                                                                     │
 │  [ASST]  Hello, world!                                                                           │
 │  [TOOL>] Bash · {                                                                                │
 │> [TOOL<] toolu-00 · hello                                                                        │
-│                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │

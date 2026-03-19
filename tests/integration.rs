@@ -128,20 +128,20 @@ fn make_app() -> AppState {
 fn test_app_visible_count_hides_thinking_by_default() {
     let app = make_app();
     // 5 items total, 1 thinking hidden → 4 visible
-    assert_eq!(app.visible_count(), 4);
+    assert_eq!(app.navigable_count(), 4);
 }
 
 #[test]
 fn test_app_visible_count_shows_all_with_thinking() {
     let mut app = make_app();
     app.show_thinking = true;
-    assert_eq!(app.visible_count(), 5);
+    assert_eq!(app.navigable_count(), 5);
 }
 
 #[test]
 fn test_app_navigate_to_last() {
     let mut app = make_app();
-    let last = app.visible_count() - 1;
+    let last = app.navigable_count() - 1;
     for _ in 0..last {
         app.move_down();
     }
@@ -162,10 +162,12 @@ fn test_app_navigate_back_to_first() {
 #[test]
 fn test_app_clamp_scroll_keeps_selection_visible() {
     let mut app = make_app();
+    // all_items=[SYS,THINK,ASST,TOOL>,TOOL<]; navigable (no think)=[SYS,ASST,TOOL>,TOOL<]
+    // selected=3 → navigable[3]=TOOL< → all_items index 4
     app.selected = 3;
     app.clamp_scroll(2);
-    // selected=3, height=2 → scroll = 3-2+1 = 2
-    assert_eq!(app.list_scroll, 2);
+    // list_pos=4, height=2 → scroll = 4-2+1 = 3
+    assert_eq!(app.list_scroll, 3);
 }
 
 // ── UI snapshot tests ─────────────────────────────────────────────────────────
@@ -218,6 +220,6 @@ fn snapshot_ui_second_item_selected() {
 #[test]
 fn snapshot_ui_last_item_selected() {
     let mut state = make_app();
-    state.selected = state.visible_count() - 1;
+    state.selected = state.navigable_count() - 1;
     insta::assert_snapshot!(render_ui(&mut state, 100, 30));
 }
