@@ -41,11 +41,23 @@ pub fn handle_key(state: &mut AppState, key: KeyEvent) {
 
         // Toggle thinking
         (KeyModifiers::NONE, KeyCode::Char('t')) => {
+            // Remember which item is selected before the navigable set changes
+            let current_ptr = state.selected_item().map(|item| item as *const _);
             state.show_thinking = !state.show_thinking;
-            // Clamp selection if items changed
-            let count = state.navigable_count();
-            if count > 0 && state.selected >= count {
-                state.selected = count - 1;
+            if let Some(ptr) = current_ptr {
+                let new_idx = state
+                    .navigable_items()
+                    .iter()
+                    .position(|item| std::ptr::eq(*item, ptr));
+                if let Some(idx) = new_idx {
+                    state.selected = idx;
+                } else {
+                    // Selected item is no longer navigable (was a thinking block, now hidden)
+                    let count = state.navigable_count();
+                    if count > 0 && state.selected >= count {
+                        state.selected = count - 1;
+                    }
+                }
             }
             state.detail_scroll = 0;
         }
@@ -205,6 +217,30 @@ mod tests {
         state.selected = 1; // pointing at thinking item
         handle_key(&mut state, key(KeyCode::Char('t'))); // hide thinking → count becomes 1
         assert_eq!(state.selected, 0); // clamped to last visible
+    }
+
+    #[test]
+    fn test_toggle_thinking_preserves_selected_item() {
+        // items: Assistant(0), Thinking(1), Assistant(2), Thinking(3), Assistant(4)
+        // show_thinking=false → navigable = [0,2,4], so selected=2 points to Assistant(4)
+        // After toggling on, selected should still point to Assistant(4), i.e. navigable index 4
+        let mut state = make_state(0);
+        state.all_items = vec![
+            make_item(), // 0 Assistant
+            DisplayItem { role: Role::Thinking, badge: "[T]", summary: "t".to_string(), detail: "d".to_string() },
+            make_item(), // 2 Assistant
+            DisplayItem { role: Role::Thinking, badge: "[T]", summary: "t".to_string(), detail: "d".to_string() },
+            make_item(), // 4 Assistant
+        ];
+        state.show_thinking = false;
+        state.selected = 2; // third non-thinking = all_items[4]
+        handle_key(&mut state, key(KeyCode::Char('t'))); // show thinking
+        assert_eq!(state.selected, 4); // all_items[4] is now navigable index 4
+        assert_eq!(
+            state.selected_item().unwrap().role,
+            Role::Assistant,
+            "should remain on the same Assistant item"
+        );
     }
 
     #[test]
