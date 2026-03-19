@@ -14,6 +14,7 @@ use vischat::message::DisplayItem;
 #[derive(Parser)]
 #[command(
     name = "vischat",
+    version,
     about = "Browse AI agent chat history in JSONL format"
 )]
 struct Cli {
