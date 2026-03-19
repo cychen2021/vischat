@@ -162,12 +162,10 @@ fn draw_list_expanded(frame: &mut Frame, state: &AppState, area: ratatui::layout
             if lines.len() >= area_height {
                 break;
             }
-            for (j, content_line) in item.detail.lines().enumerate() {
-                if j >= state.detail_scroll {
-                    lines.push(Line::from(format!("  {}", content_line)));
-                    if lines.len() >= area_height {
-                        break 'outer;
-                    }
+            for content_line in item.detail.lines().skip(1 + state.detail_scroll) {
+                lines.push(Line::from(format!("  {}", content_line)));
+                if lines.len() >= area_height {
+                    break 'outer;
                 }
             }
         } else if folded {
