@@ -90,7 +90,7 @@ fn draw_list(frame: &mut Frame, state: &mut AppState, area: ratatui::layout::Rec
             } else {
                 badge_style(&item.role)
             };
-            let badge_span = Span::styled(format!("{:<8}", item.badge), b_style);
+            let badge_span = Span::styled(format!("+ {:<8}", item.badge), b_style);
 
             let summary_text = if folded {
                 "...".to_string()
@@ -133,7 +133,7 @@ fn draw_list(frame: &mut Frame, state: &mut AppState, area: ratatui::layout::Rec
                 .bg(Color::DarkGray)
                 .add_modifier(Modifier::BOLD),
         )
-        .highlight_symbol("> ");
+        .highlight_symbol("");
 
     frame.render_stateful_widget(list, area, &mut list_state);
 }
@@ -156,7 +156,7 @@ fn draw_list_expanded(frame: &mut Frame, state: &AppState, area: ratatui::layout
                 .fg(Color::White)
                 .bg(Color::DarkGray)
                 .add_modifier(Modifier::BOLD);
-            let badge_span = Span::styled(raw_badge, sel_style);
+            let badge_span = Span::styled(format!("- {}", raw_badge), sel_style);
             let summary_span = Span::styled(item.summary.clone(), sel_style);
             lines.push(Line::from(vec![badge_span, summary_span]));
             if lines.len() >= area_height {
@@ -174,14 +174,14 @@ fn draw_list_expanded(frame: &mut Frame, state: &AppState, area: ratatui::layout
             let fold_style = Style::default()
                 .fg(Color::DarkGray)
                 .add_modifier(Modifier::DIM);
-            let badge_span = Span::styled(raw_badge, fold_style);
+            let badge_span = Span::styled(format!("+ {}", raw_badge), fold_style);
             let summary_span = Span::styled("...".to_string(), fold_style);
             lines.push(Line::from(vec![badge_span, summary_span]));
             if lines.len() >= area_height {
                 break;
             }
         } else {
-            let badge_span = Span::styled(raw_badge, badge_style(&item.role));
+            let badge_span = Span::styled(format!("+ {}", raw_badge), badge_style(&item.role));
             let summary_span = Span::styled(item.summary.clone(), Style::default().fg(Color::Gray));
             lines.push(Line::from(vec![badge_span, summary_span]));
             if lines.len() >= area_height {
