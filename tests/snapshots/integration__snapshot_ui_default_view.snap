@@ -1,0 +1,34 @@
+---
+source: tests/integration.rs
+expression: "render_ui(&mut state, 100, 30)"
+---
+┌ vischat · simple.jsonl  [thinking hidden — press t]──────────────────────────────────────────────┐
+│> [SYS]   session=test-ses model=claude-test cwd=/test tools=2                                    │
+│  [ASST]  Hello, world!                                                                           │
+│  [TOOL>] Bash · {                                                                                │
+│  [TOOL<] toolu-00 · hello                                                                        │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌ [SYS] System Init ───────────────────────────────────────────────────────────────────────────────┐
+│Session:  test-session                                                                            │
+│Model:    claude-test                                                                             │
+│Cwd:      /test                                                                                   │
+│Tools (2):                                                                                        │
+│  Bash, Read                                                                                      │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+ j/k:move  g/G:first/last  Ctrl-d/u:scroll  t:thinking  q:quit    1/4

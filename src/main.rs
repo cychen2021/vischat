@@ -28,7 +28,7 @@ fn main() -> Result<()> {
 
     let all_items: Vec<DisplayItem> = messages
         .iter()
-        .flat_map(|msg| DisplayItem::from_logical(msg))
+        .flat_map(DisplayItem::from_logical)
         .collect();
 
     if all_items.is_empty() {
@@ -51,10 +51,10 @@ fn run_tui(items: Vec<DisplayItem>, file_path: String) -> Result<()> {
     loop {
         terminal.draw(|f| vischat::ui::draw(f, &mut state))?;
 
-        if event::poll(std::time::Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
-                vischat::navigation::handle_key(&mut state, key);
-            }
+        if event::poll(std::time::Duration::from_millis(100))?
+            && let Event::Key(key) = event::read()?
+        {
+            vischat::navigation::handle_key(&mut state, key);
         }
 
         if state.quit {

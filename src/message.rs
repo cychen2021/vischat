@@ -193,7 +193,7 @@ impl DisplayItem {
                 let summary = format!(
                     "session={} model={} cwd={} tools={}",
                     &session_id[..session_id.len().min(8)],
-                    model.split('/').last().unwrap_or(model),
+                    model.split('/').next_back().unwrap_or(model),
                     cwd,
                     tools.len()
                 );

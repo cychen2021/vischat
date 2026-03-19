@@ -1,5 +1,0 @@
----
-source: tests/integration.rs
-expression: "items[1].detail"
----
-Let me think.

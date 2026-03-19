@@ -58,12 +58,12 @@ pub fn parse_str(content: &str) -> Result<Vec<LogicalMessage>> {
                     }
 
                     // Parse content blocks from this record
-                    if let Some(content_val) = &msg.content {
-                        if let Some(arr) = content_val.as_array() {
-                            for block_val in arr {
-                                if let Some(block) = ContentBlock::from_value(block_val) {
-                                    current_assistant_blocks.push(block);
-                                }
+                    if let Some(content_val) = &msg.content
+                        && let Some(arr) = content_val.as_array()
+                    {
+                        for block_val in arr {
+                            if let Some(block) = ContentBlock::from_value(block_val) {
+                                current_assistant_blocks.push(block);
                             }
                         }
                     }
@@ -77,19 +77,19 @@ pub fn parse_str(content: &str) -> Result<Vec<LogicalMessage>> {
                     &mut messages,
                 );
 
-                if let Some(msg) = &record.message {
-                    if let Some(content_val) = &msg.content {
-                        let mut blocks = Vec::new();
-                        if let Some(arr) = content_val.as_array() {
-                            for block_val in arr {
-                                if let Some(block) = ContentBlock::from_value(block_val) {
-                                    blocks.push(block);
-                                }
+                if let Some(msg) = &record.message
+                    && let Some(content_val) = &msg.content
+                {
+                    let mut blocks = Vec::new();
+                    if let Some(arr) = content_val.as_array() {
+                        for block_val in arr {
+                            if let Some(block) = ContentBlock::from_value(block_val) {
+                                blocks.push(block);
                             }
                         }
-                        if !blocks.is_empty() {
-                            messages.push(LogicalMessage::UserTurn { blocks });
-                        }
+                    }
+                    if !blocks.is_empty() {
+                        messages.push(LogicalMessage::UserTurn { blocks });
                     }
                 }
             }
@@ -112,13 +112,13 @@ fn flush_assistant(
     blocks: &mut Vec<ContentBlock>,
     messages: &mut Vec<LogicalMessage>,
 ) {
-    if let Some(msg_id) = id.take() {
-        if !blocks.is_empty() {
-            messages.push(LogicalMessage::AssistantTurn {
-                id: msg_id,
-                blocks: std::mem::take(blocks),
-            });
-        }
+    if let Some(msg_id) = id.take()
+        && !blocks.is_empty()
+    {
+        messages.push(LogicalMessage::AssistantTurn {
+            id: msg_id,
+            blocks: std::mem::take(blocks),
+        });
     }
 }
 

@@ -168,44 +168,56 @@ fn test_app_clamp_scroll_keeps_selection_visible() {
     assert_eq!(app.list_scroll, 2);
 }
 
-// ── Snapshot tests ────────────────────────────────────────────────────────────
+// ── UI snapshot tests ─────────────────────────────────────────────────────────
 
-#[test]
-fn snapshot_system_item_summary() {
-    let items = fixture_display_items();
-    insta::assert_snapshot!("system_item_summary", items[0].summary);
+use ratatui::{Terminal, backend::TestBackend};
+
+/// Render the full TUI to a fixed-size buffer and return it as a string.
+/// Trailing whitespace is stripped from each row for stable snapshots.
+fn render_ui(state: &mut AppState, width: u16, height: u16) -> String {
+    let backend = TestBackend::new(width, height);
+    let mut terminal = Terminal::new(backend).unwrap();
+    terminal.draw(|f| vischat::ui::draw(f, state)).unwrap();
+    let buffer = terminal.backend().buffer();
+    let w = buffer.area.width as usize;
+    buffer
+        .content()
+        .chunks(w)
+        .map(|row| {
+            row.iter()
+                .map(|cell| cell.symbol())
+                .collect::<String>()
+                .trim_end()
+                .to_string()
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 #[test]
-fn snapshot_system_item_detail() {
-    let items = fixture_display_items();
-    insta::assert_snapshot!("system_item_detail", items[0].detail);
+fn snapshot_ui_default_view() {
+    let mut state = make_app();
+    insta::assert_snapshot!(render_ui(&mut state, 100, 30));
 }
 
 #[test]
-fn snapshot_assistant_text_item() {
-    let items = fixture_display_items();
-    insta::assert_snapshot!("assistant_text_summary", items[2].summary);
-    insta::assert_snapshot!("assistant_text_detail", items[2].detail);
+fn snapshot_ui_thinking_visible() {
+    let mut state = make_app();
+    state.show_thinking = true;
+    insta::assert_snapshot!(render_ui(&mut state, 100, 30));
 }
 
 #[test]
-fn snapshot_tool_use_item() {
-    let items = fixture_display_items();
-    insta::assert_snapshot!("tool_use_summary", items[3].summary);
-    insta::assert_snapshot!("tool_use_detail", items[3].detail);
+fn snapshot_ui_second_item_selected() {
+    // Navigate down once — detail pane should show tool-use content
+    let mut state = make_app();
+    state.move_down();
+    insta::assert_snapshot!(render_ui(&mut state, 100, 30));
 }
 
 #[test]
-fn snapshot_tool_result_item() {
-    let items = fixture_display_items();
-    insta::assert_snapshot!("tool_result_summary", items[4].summary);
-    insta::assert_snapshot!("tool_result_detail", items[4].detail);
-}
-
-#[test]
-fn snapshot_thinking_item() {
-    let items = fixture_display_items();
-    insta::assert_snapshot!("thinking_summary", items[1].summary);
-    insta::assert_snapshot!("thinking_detail", items[1].detail);
+fn snapshot_ui_last_item_selected() {
+    let mut state = make_app();
+    state.selected = state.visible_count() - 1;
+    insta::assert_snapshot!(render_ui(&mut state, 100, 30));
 }

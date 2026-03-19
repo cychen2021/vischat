@@ -1,8 +1,0 @@
----
-source: tests/integration.rs
-expression: "items[3].detail"
----
-[TOOL USE] Bash
-{
-  "command": "echo hello"
-}

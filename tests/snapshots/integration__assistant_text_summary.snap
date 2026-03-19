@@ -1,5 +1,0 @@
----
-source: tests/integration.rs
-expression: "items[2].summary"
----
-Hello, world!
