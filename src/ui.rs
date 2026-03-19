@@ -162,9 +162,10 @@ fn draw_list_expanded(frame: &mut Frame, state: &AppState, area: ratatui::layout
         " [thinking hidden — press t]"
     };
 
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(format!(" vischat · {} {} [expanded]", state.file_path, thinking_hint));
+    let block = Block::default().borders(Borders::ALL).title(format!(
+        " vischat · {} {} [expanded]",
+        state.file_path, thinking_hint
+    ));
 
     let para = Paragraph::new(lines).block(block);
     frame.render_widget(para, area);
