@@ -70,3 +70,169 @@ impl AppState {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::message::{DisplayItem, Role};
+
+    fn make_item(role: Role) -> DisplayItem {
+        DisplayItem {
+            role,
+            badge: "[T]",
+            summary: "test".to_string(),
+            detail: "detail".to_string(),
+        }
+    }
+
+    fn make_state(n: usize) -> AppState {
+        let items = (0..n).map(|_| make_item(Role::Assistant)).collect();
+        AppState::new(items, "test.jsonl".to_string())
+    }
+
+    #[test]
+    fn test_new_defaults() {
+        let state = AppState::new(vec![], "file.jsonl".to_string());
+        assert_eq!(state.selected, 0);
+        assert_eq!(state.list_scroll, 0);
+        assert_eq!(state.detail_scroll, 0);
+        assert!(!state.show_thinking);
+        assert!(!state.quit);
+    }
+
+    #[test]
+    fn test_visible_items_hides_thinking_by_default() {
+        let items = vec![
+            make_item(Role::Assistant),
+            make_item(Role::Thinking),
+            make_item(Role::ToolUse),
+        ];
+        let state = AppState::new(items, "f".to_string());
+        let visible = state.visible_items();
+        assert_eq!(visible.len(), 2);
+        assert!(visible.iter().all(|i| i.role != Role::Thinking));
+    }
+
+    #[test]
+    fn test_visible_items_shows_thinking_when_enabled() {
+        let items = vec![make_item(Role::Assistant), make_item(Role::Thinking)];
+        let mut state = AppState::new(items, "f".to_string());
+        state.show_thinking = true;
+        assert_eq!(state.visible_items().len(), 2);
+    }
+
+    #[test]
+    fn test_visible_count_excludes_thinking() {
+        let items = vec![
+            make_item(Role::Assistant),
+            make_item(Role::Thinking),
+            make_item(Role::Assistant),
+        ];
+        let state = AppState::new(items, "f".to_string());
+        assert_eq!(state.visible_count(), 2);
+    }
+
+    #[test]
+    fn test_move_down_advances_selection() {
+        let mut state = make_state(3);
+        state.move_down();
+        assert_eq!(state.selected, 1);
+    }
+
+    #[test]
+    fn test_move_down_stops_at_end() {
+        let mut state = make_state(2);
+        state.move_down();
+        state.move_down(); // at last item, no-op
+        assert_eq!(state.selected, 1);
+    }
+
+    #[test]
+    fn test_move_down_resets_detail_scroll() {
+        let mut state = make_state(2);
+        state.detail_scroll = 5;
+        state.move_down();
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn test_move_up_retreats_selection() {
+        let mut state = make_state(3);
+        state.selected = 2;
+        state.move_up();
+        assert_eq!(state.selected, 1);
+    }
+
+    #[test]
+    fn test_move_up_stops_at_start() {
+        let mut state = make_state(3);
+        state.move_up(); // already at 0, no-op
+        assert_eq!(state.selected, 0);
+    }
+
+    #[test]
+    fn test_move_up_resets_detail_scroll() {
+        let mut state = make_state(3);
+        state.selected = 1;
+        state.detail_scroll = 7;
+        state.move_up();
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn test_move_on_empty_list_does_not_panic() {
+        let mut state = make_state(0);
+        state.move_down();
+        state.move_up();
+        assert_eq!(state.selected, 0);
+    }
+
+    #[test]
+    fn test_selected_item_returns_first_by_default() {
+        let items = vec![make_item(Role::Assistant), make_item(Role::ToolUse)];
+        let mut state = AppState::new(items, "f".to_string());
+        state.all_items[0].summary = "first".to_string();
+        let item = state.selected_item().unwrap();
+        assert_eq!(item.summary, "first");
+    }
+
+    #[test]
+    fn test_selected_item_none_when_empty() {
+        let state = make_state(0);
+        assert!(state.selected_item().is_none());
+    }
+
+    #[test]
+    fn test_clamp_scroll_scrolls_down_when_selected_ahead() {
+        let mut state = make_state(5);
+        state.selected = 4;
+        state.clamp_scroll(3); // height 3, selected=4 → scroll to 4-3+1=2
+        assert_eq!(state.list_scroll, 2);
+    }
+
+    #[test]
+    fn test_clamp_scroll_scrolls_up_when_selected_behind() {
+        let mut state = make_state(5);
+        state.selected = 0;
+        state.list_scroll = 3;
+        state.clamp_scroll(3);
+        assert_eq!(state.list_scroll, 0);
+    }
+
+    #[test]
+    fn test_clamp_scroll_zero_height_no_change() {
+        let mut state = make_state(3);
+        state.list_scroll = 5;
+        state.clamp_scroll(0);
+        assert_eq!(state.list_scroll, 5);
+    }
+
+    #[test]
+    fn test_clamp_scroll_within_window_unchanged() {
+        let mut state = make_state(5);
+        state.selected = 2;
+        state.list_scroll = 1;
+        state.clamp_scroll(5); // window big enough
+        assert_eq!(state.list_scroll, 1);
+    }
+}

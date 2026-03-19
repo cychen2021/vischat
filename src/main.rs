@@ -1,9 +1,3 @@
-mod app;
-mod message;
-mod navigation;
-mod parser;
-mod ui;
-
 use anyhow::Result;
 use clap::Parser;
 use crossterm::{
@@ -14,11 +8,14 @@ use crossterm::{
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
 
-use crate::app::AppState;
-use crate::message::DisplayItem;
+use vischat::app::AppState;
+use vischat::message::DisplayItem;
 
 #[derive(Parser)]
-#[command(name = "vischat", about = "Browse AI agent chat history in JSONL format")]
+#[command(
+    name = "vischat",
+    about = "Browse AI agent chat history in JSONL format"
+)]
 struct Cli {
     /// Path to the JSONL chat history file
     file: String,
@@ -27,7 +24,7 @@ struct Cli {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let messages = parser::parse_file(&cli.file)?;
+    let messages = vischat::parser::parse_file(&cli.file)?;
 
     let all_items: Vec<DisplayItem> = messages
         .iter()
@@ -52,11 +49,11 @@ fn run_tui(items: Vec<DisplayItem>, file_path: String) -> Result<()> {
     let mut state = AppState::new(items, file_path);
 
     loop {
-        terminal.draw(|f| ui::draw(f, &mut state))?;
+        terminal.draw(|f| vischat::ui::draw(f, &mut state))?;
 
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
-                navigation::handle_key(&mut state, key);
+                vischat::navigation::handle_key(&mut state, key);
             }
         }
 

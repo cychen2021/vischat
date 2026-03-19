@@ -1,0 +1,9 @@
+---
+source: tests/integration.rs
+expression: "items[0].detail"
+---
+Session:  test-session
+Model:    claude-test
+Cwd:      /test
+Tools (2):
+  Bash, Read

@@ -4,18 +4,15 @@ use crate::app::AppState;
 
 pub fn handle_key(state: &mut AppState, key: KeyEvent) {
     match (key.modifiers, key.code) {
-        (KeyModifiers::NONE, KeyCode::Char('q'))
-        | (KeyModifiers::NONE, KeyCode::Esc) => {
+        (KeyModifiers::NONE, KeyCode::Char('q')) | (KeyModifiers::NONE, KeyCode::Esc) => {
             state.quit = true;
         }
 
         // Movement
-        (KeyModifiers::NONE, KeyCode::Char('j'))
-        | (KeyModifiers::NONE, KeyCode::Down) => {
+        (KeyModifiers::NONE, KeyCode::Char('j')) | (KeyModifiers::NONE, KeyCode::Down) => {
             state.move_down();
         }
-        (KeyModifiers::NONE, KeyCode::Char('k'))
-        | (KeyModifiers::NONE, KeyCode::Up) => {
+        (KeyModifiers::NONE, KeyCode::Char('k')) | (KeyModifiers::NONE, KeyCode::Up) => {
             state.move_up();
         }
         (KeyModifiers::NONE, KeyCode::Char('g')) => {
@@ -49,5 +46,167 @@ pub fn handle_key(state: &mut AppState, key: KeyEvent) {
         }
 
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::message::{DisplayItem, Role};
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+    fn make_item() -> DisplayItem {
+        DisplayItem {
+            role: Role::Assistant,
+            badge: "[T]",
+            summary: "test".to_string(),
+            detail: "detail".to_string(),
+        }
+    }
+
+    fn make_state(n: usize) -> AppState {
+        let items = (0..n).map(|_| make_item()).collect();
+        AppState::new(items, "test.jsonl".to_string())
+    }
+
+    fn key(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    fn ctrl_key(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::CONTROL)
+    }
+
+    #[test]
+    fn test_quit_on_q() {
+        let mut state = make_state(2);
+        handle_key(&mut state, key(KeyCode::Char('q')));
+        assert!(state.quit);
+    }
+
+    #[test]
+    fn test_quit_on_esc() {
+        let mut state = make_state(2);
+        handle_key(&mut state, key(KeyCode::Esc));
+        assert!(state.quit);
+    }
+
+    #[test]
+    fn test_move_down_j() {
+        let mut state = make_state(3);
+        handle_key(&mut state, key(KeyCode::Char('j')));
+        assert_eq!(state.selected, 1);
+    }
+
+    #[test]
+    fn test_move_down_arrow() {
+        let mut state = make_state(3);
+        handle_key(&mut state, key(KeyCode::Down));
+        assert_eq!(state.selected, 1);
+    }
+
+    #[test]
+    fn test_move_up_k() {
+        let mut state = make_state(3);
+        state.selected = 2;
+        handle_key(&mut state, key(KeyCode::Char('k')));
+        assert_eq!(state.selected, 1);
+    }
+
+    #[test]
+    fn test_move_up_arrow() {
+        let mut state = make_state(3);
+        state.selected = 2;
+        handle_key(&mut state, key(KeyCode::Up));
+        assert_eq!(state.selected, 1);
+    }
+
+    #[test]
+    fn test_jump_to_first_g() {
+        let mut state = make_state(5);
+        state.selected = 4;
+        state.list_scroll = 3;
+        state.detail_scroll = 5;
+        handle_key(&mut state, key(KeyCode::Char('g')));
+        assert_eq!(state.selected, 0);
+        assert_eq!(state.list_scroll, 0);
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn test_jump_to_last_g_uppercase() {
+        let mut state = make_state(5);
+        handle_key(&mut state, key(KeyCode::Char('G')));
+        assert_eq!(state.selected, 4);
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn test_ctrl_d_scrolls_detail_down() {
+        let mut state = make_state(2);
+        handle_key(&mut state, ctrl_key(KeyCode::Char('d')));
+        assert_eq!(state.detail_scroll, 10);
+    }
+
+    #[test]
+    fn test_ctrl_d_accumulates() {
+        let mut state = make_state(2);
+        handle_key(&mut state, ctrl_key(KeyCode::Char('d')));
+        handle_key(&mut state, ctrl_key(KeyCode::Char('d')));
+        assert_eq!(state.detail_scroll, 20);
+    }
+
+    #[test]
+    fn test_ctrl_u_scrolls_detail_up() {
+        let mut state = make_state(2);
+        state.detail_scroll = 20;
+        handle_key(&mut state, ctrl_key(KeyCode::Char('u')));
+        assert_eq!(state.detail_scroll, 10);
+    }
+
+    #[test]
+    fn test_ctrl_u_saturates_at_zero() {
+        let mut state = make_state(2);
+        state.detail_scroll = 5;
+        handle_key(&mut state, ctrl_key(KeyCode::Char('u')));
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn test_toggle_thinking_t() {
+        let mut state = make_state(2);
+        assert!(!state.show_thinking);
+        handle_key(&mut state, key(KeyCode::Char('t')));
+        assert!(state.show_thinking);
+        handle_key(&mut state, key(KeyCode::Char('t')));
+        assert!(!state.show_thinking);
+    }
+
+    #[test]
+    fn test_toggle_thinking_clamps_selection() {
+        // Add a thinking item so visible count changes when toggled
+        let mut state = make_state(0);
+        state.all_items = vec![
+            make_item(), // Assistant
+            DisplayItem {
+                role: Role::Thinking,
+                badge: "[THINK]",
+                summary: "t".to_string(),
+                detail: "d".to_string(),
+            },
+        ];
+        state.show_thinking = true;
+        state.selected = 1; // pointing at thinking item
+        handle_key(&mut state, key(KeyCode::Char('t'))); // hide thinking → count becomes 1
+        assert_eq!(state.selected, 0); // clamped to last visible
+    }
+
+    #[test]
+    fn test_unknown_key_does_nothing() {
+        let mut state = make_state(2);
+        handle_key(&mut state, key(KeyCode::Char('z')));
+        assert!(!state.quit);
+        assert_eq!(state.selected, 0);
     }
 }

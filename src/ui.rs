@@ -62,10 +62,7 @@ fn draw_list(frame: &mut Frame, state: &mut AppState, area: ratatui::layout::Rec
         .skip(scroll)
         .take(area.height.saturating_sub(2) as usize)
         .map(|(i, item)| {
-            let badge_span = Span::styled(
-                format!("{:<8}", item.badge),
-                badge_style(&item.role),
-            );
+            let badge_span = Span::styled(format!("{:<8}", item.badge), badge_style(&item.role));
             let summary_style = if i == selected {
                 Style::default()
                     .fg(Color::White)
