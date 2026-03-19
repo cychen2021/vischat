@@ -127,13 +127,14 @@ fn draw_list_expanded(frame: &mut Frame, state: &AppState, area: ratatui::layout
     let mut lines: Vec<Line> = Vec::new();
 
     'outer: for (i, item) in visible.iter().enumerate().skip(scroll) {
-        let badge_span = Span::styled(format!("{:<8}", item.badge), badge_style(&item.role));
+        let raw_badge = format!("{:<8}", item.badge);
         if i == selected {
-            let summary_style = Style::default()
+            let sel_style = Style::default()
                 .fg(Color::White)
                 .bg(Color::DarkGray)
                 .add_modifier(Modifier::BOLD);
-            let summary_span = Span::styled(item.summary.clone(), summary_style);
+            let badge_span = Span::styled(raw_badge, sel_style);
+            let summary_span = Span::styled(item.summary.clone(), sel_style);
             lines.push(Line::from(vec![badge_span, summary_span]));
             if lines.len() >= area_height {
                 break;
@@ -147,8 +148,8 @@ fn draw_list_expanded(frame: &mut Frame, state: &AppState, area: ratatui::layout
                 }
             }
         } else {
-            let summary_style = Style::default().fg(Color::Gray);
-            let summary_span = Span::styled(item.summary.clone(), summary_style);
+            let badge_span = Span::styled(raw_badge, badge_style(&item.role));
+            let summary_span = Span::styled(item.summary.clone(), Style::default().fg(Color::Gray));
             lines.push(Line::from(vec![badge_span, summary_span]));
             if lines.len() >= area_height {
                 break;
@@ -167,7 +168,9 @@ fn draw_list_expanded(frame: &mut Frame, state: &AppState, area: ratatui::layout
         state.file_path, thinking_hint
     ));
 
-    let para = Paragraph::new(lines).block(block);
+    let para = Paragraph::new(lines)
+        .block(block)
+        .wrap(Wrap { trim: false });
     frame.render_widget(para, area);
 }
 
@@ -211,7 +214,7 @@ fn draw_status(frame: &mut Frame, state: &AppState, area: ratatui::layout::Rect)
         format!("{}/{}", state.selected + 1, total)
     };
     let status = format!(
-        " j/k:move  g/G:first/last  Ctrl-d/u:scroll  Enter:expand  t:thinking  q:quit    {}",
+        " j/k:move  g/G:first/last  Ctrl-d/u:scroll  Enter/Space:expand  t:thinking  q:quit    {}",
         pos
     );
     let para = Paragraph::new(status).style(Style::default().fg(Color::DarkGray));

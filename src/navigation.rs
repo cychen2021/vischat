@@ -208,6 +208,34 @@ mod tests {
     }
 
     #[test]
+    fn test_enter_toggles_expanded() {
+        let mut state = make_state(2);
+        assert!(!state.expanded);
+        handle_key(&mut state, key(KeyCode::Enter));
+        assert!(state.expanded);
+        handle_key(&mut state, key(KeyCode::Enter));
+        assert!(!state.expanded);
+    }
+
+    #[test]
+    fn test_space_toggles_expanded() {
+        let mut state = make_state(2);
+        assert!(!state.expanded);
+        handle_key(&mut state, key(KeyCode::Char(' ')));
+        assert!(state.expanded);
+        handle_key(&mut state, key(KeyCode::Char(' ')));
+        assert!(!state.expanded);
+    }
+
+    #[test]
+    fn test_enter_resets_detail_scroll() {
+        let mut state = make_state(2);
+        state.detail_scroll = 10;
+        handle_key(&mut state, key(KeyCode::Enter));
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
     fn test_unknown_key_does_nothing() {
         let mut state = make_state(2);
         handle_key(&mut state, key(KeyCode::Char('z')));

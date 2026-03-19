@@ -212,6 +212,41 @@ mod tests {
     }
 
     #[test]
+    fn test_toggle_expand_toggles_flag() {
+        let mut state = make_state(2);
+        assert!(!state.expanded);
+        state.toggle_expand();
+        assert!(state.expanded);
+        state.toggle_expand();
+        assert!(!state.expanded);
+    }
+
+    #[test]
+    fn test_toggle_expand_resets_detail_scroll() {
+        let mut state = make_state(2);
+        state.detail_scroll = 5;
+        state.toggle_expand();
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn test_move_down_collapses_expansion() {
+        let mut state = make_state(3);
+        state.expanded = true;
+        state.move_down();
+        assert!(!state.expanded);
+    }
+
+    #[test]
+    fn test_move_up_collapses_expansion() {
+        let mut state = make_state(3);
+        state.selected = 1;
+        state.expanded = true;
+        state.move_up();
+        assert!(!state.expanded);
+    }
+
+    #[test]
     fn test_clamp_scroll_scrolls_down_when_selected_ahead() {
         let mut state = make_state(5);
         state.selected = 4;
