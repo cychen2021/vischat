@@ -288,4 +288,37 @@ mod tests {
         assert!(!state.quit);
         assert_eq!(state.selected, 0);
     }
+
+    #[test]
+    fn test_toggle_thinking_all_thinking_items_count_zero() {
+        // All items are Thinking; when show_thinking is toggled off, navigable count → 0
+        let mut state = make_state(0);
+        state.all_items = vec![
+            DisplayItem {
+                role: Role::Thinking,
+                badge: "[THINK]",
+                summary: "t1".to_string(),
+                detail: "d1".to_string(),
+            },
+            DisplayItem {
+                role: Role::Thinking,
+                badge: "[THINK]",
+                summary: "t2".to_string(),
+                detail: "d2".to_string(),
+            },
+        ];
+        state.show_thinking = true;
+        state.selected = 1;
+        handle_key(&mut state, key(KeyCode::Char('t'))); // hide thinking → count = 0
+        // count == 0 → the clamping branch is not entered; selected stays wherever it was
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn test_toggle_thinking_empty_state_does_not_panic() {
+        let mut state = make_state(0);
+        handle_key(&mut state, key(KeyCode::Char('t')));
+        assert!(state.show_thinking);
+        assert_eq!(state.detail_scroll, 0);
+    }
 }

@@ -168,7 +168,11 @@ fn draw_list_expanded(frame: &mut Frame, state: &AppState, area: ratatui::layout
             if lines.len() >= area_height {
                 break;
             }
-            for content_line in item.detail.lines().skip(state.detail_scroll.saturating_add(1)) {
+            for content_line in item
+                .detail
+                .lines()
+                .skip(state.detail_scroll.saturating_add(1))
+            {
                 lines.push(Line::from(format!("  {}", content_line)));
                 if lines.len() >= area_height {
                     break 'outer;
@@ -256,4 +260,251 @@ fn draw_status(frame: &mut Frame, state: &AppState, area: ratatui::layout::Rect)
     );
     let para = Paragraph::new(status).style(Style::default().fg(Color::DarkGray));
     frame.render_widget(para, area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::message::{DisplayItem, Role};
+    use ratatui::{Terminal, backend::TestBackend};
+
+    fn make_item(role: Role, badge: &'static str) -> DisplayItem {
+        DisplayItem {
+            role,
+            badge,
+            summary: format!("summary for {}", badge),
+            detail: format!("detail for {}\nline 2\nline 3", badge),
+        }
+    }
+
+    fn make_state() -> AppState {
+        let items = vec![
+            make_item(Role::System, "[SYS]"),
+            make_item(Role::Thinking, "[THINK]"),
+            make_item(Role::Assistant, "[ASST]"),
+            make_item(Role::ToolUse, "[TOOL>]"),
+            make_item(Role::ToolResult, "[TOOL<]"),
+        ];
+        AppState::new(items, "test.jsonl".to_string())
+    }
+
+    fn render(state: &mut AppState) -> String {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| draw(f, state)).unwrap();
+        let buf = terminal.backend().buffer().clone();
+        let w = buf.area.width as usize;
+        buf.content()
+            .chunks(w)
+            .map(|row| {
+                row.iter()
+                    .map(|c| c.symbol())
+                    .collect::<String>()
+                    .trim_end()
+                    .to_string()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn test_draw_default_view_contains_title() {
+        let mut state = make_state();
+        let output = render(&mut state);
+        assert!(output.contains("vischat"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_default_view_shows_items() {
+        let mut state = make_state();
+        let output = render(&mut state);
+        assert!(output.contains("[SYS]"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_thinking_folded_hint() {
+        let mut state = make_state();
+        let output = render(&mut state);
+        assert!(output.contains("thinking folded"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_thinking_visible_hint() {
+        let mut state = make_state();
+        state.show_thinking = true;
+        let output = render(&mut state);
+        assert!(output.contains("thinking visible"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_empty_state_shows_zero() {
+        let mut state = AppState::new(vec![], "empty.jsonl".to_string());
+        // Use wider terminal so the status bar position "0/0" is not cut off
+        let backend = TestBackend::new(120, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| draw(f, &mut state)).unwrap();
+        let buf = terminal.backend().buffer().clone();
+        let w = buf.area.width as usize;
+        let output: String = buf
+            .content()
+            .chunks(w)
+            .map(|row| row.iter().map(|c| c.symbol()).collect::<String>())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(output.contains("0/0"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_status_shows_position() {
+        let mut state = make_state();
+        // Use wider terminal so the status bar position "1/4" is not cut off
+        let backend = TestBackend::new(120, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| draw(f, &mut state)).unwrap();
+        let buf = terminal.backend().buffer().clone();
+        let w = buf.area.width as usize;
+        let output: String = buf
+            .content()
+            .chunks(w)
+            .map(|row| row.iter().map(|c| c.symbol()).collect::<String>())
+            .collect::<Vec<_>>()
+            .join("\n");
+        // 4 navigable (thinking folded), selected=0 → "1/4"
+        assert!(output.contains("1/4"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_expanded_view() {
+        let mut state = make_state();
+        state.expanded = true;
+        let output = render(&mut state);
+        assert!(output.contains("[expanded]"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_expanded_thinking_visible() {
+        let mut state = make_state();
+        state.expanded = true;
+        state.show_thinking = true;
+        let output = render(&mut state);
+        assert!(output.contains("[expanded]"), "output: {}", output);
+        assert!(output.contains("thinking visible"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_expanded_with_selected_item() {
+        let mut state = make_state();
+        state.expanded = true;
+        state.selected = 1; // [ASST] (thinking folded, so navigable[1] = Assistant)
+        let output = render(&mut state);
+        assert!(output.contains("[expanded]"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_expanded_selected_thinking_item() {
+        let mut state = make_state();
+        state.expanded = true;
+        state.show_thinking = true;
+        state.selected = 1; // Thinking item when visible
+        let output = render(&mut state);
+        assert!(output.contains("[THINK]"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_with_detail_scroll() {
+        let mut state = make_state();
+        state.detail_scroll = 1;
+        let output = render(&mut state);
+        assert!(output.contains("vischat"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_expanded_with_detail_scroll() {
+        let mut state = make_state();
+        state.expanded = true;
+        state.show_thinking = true;
+        state.selected = 1;
+        state.detail_scroll = 1;
+        let output = render(&mut state);
+        assert!(output.contains("[expanded]"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_badge_style_all_roles() {
+        for role in [
+            Role::System,
+            Role::Thinking,
+            Role::Assistant,
+            Role::ToolUse,
+            Role::ToolResult,
+        ] {
+            let _ = badge_style(&role);
+        }
+    }
+
+    #[test]
+    fn test_detail_title_system() {
+        assert_eq!(
+            detail_title(&make_item(Role::System, "[SYS]")),
+            "System Init"
+        );
+    }
+
+    #[test]
+    fn test_detail_title_thinking() {
+        assert_eq!(
+            detail_title(&make_item(Role::Thinking, "[THINK]")),
+            "Thinking"
+        );
+    }
+
+    #[test]
+    fn test_detail_title_assistant() {
+        assert_eq!(
+            detail_title(&make_item(Role::Assistant, "[ASST]")),
+            "Assistant Response"
+        );
+    }
+
+    #[test]
+    fn test_detail_title_tool_use() {
+        assert_eq!(
+            detail_title(&make_item(Role::ToolUse, "[TOOL>]")),
+            "Tool Invocation"
+        );
+    }
+
+    #[test]
+    fn test_detail_title_tool_result() {
+        assert_eq!(
+            detail_title(&make_item(Role::ToolResult, "[TOOL<]")),
+            "Tool Result"
+        );
+    }
+
+    #[test]
+    fn test_draw_no_selection() {
+        let mut state = AppState::new(vec![], "none.jsonl".to_string());
+        let output = render(&mut state);
+        assert!(output.contains("no selection"), "output: {}", output);
+    }
+
+    #[test]
+    fn test_draw_list_scroll_offset() {
+        // Create enough items that scroll is needed, then set list_scroll > 0
+        let items: Vec<DisplayItem> = (0..20)
+            .map(|i| DisplayItem {
+                role: Role::Assistant,
+                badge: "[ASST]",
+                summary: format!("item {}", i),
+                detail: format!("detail {}", i),
+            })
+            .collect();
+        let mut state = AppState::new(items, "many.jsonl".to_string());
+        state.list_scroll = 5;
+        state.selected = 5;
+        let output = render(&mut state);
+        assert!(output.contains("vischat"), "output: {}", output);
+    }
 }

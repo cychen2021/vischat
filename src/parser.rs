@@ -259,4 +259,53 @@ mod tests {
         let messages = parse_str(line).unwrap();
         assert!(messages.is_empty());
     }
+
+    #[test]
+    fn test_parse_file_reads_from_disk() {
+        let dir = std::env::temp_dir();
+        let path = dir.join("vischat_parse_file_test.jsonl");
+        std::fs::write(&path, SYSTEM_LINE).unwrap();
+        let messages = parse_file(path.to_str().unwrap()).unwrap();
+        assert_eq!(messages.len(), 1);
+        assert!(matches!(messages[0], LogicalMessage::SystemInit { .. }));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_parse_file_not_found_returns_error() {
+        let result = parse_file("/nonexistent/vischat_no_such_file.jsonl");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_assistant_non_array_content_not_emitted() {
+        // content is a string, not array → no blocks parsed, no AssistantTurn emitted
+        let line = r#"{"type":"assistant","message":{"id":"msg-001","role":"assistant","content":"string not array"},"session_id":"s","uuid":"u"}"#;
+        let messages = parse_str(line).unwrap();
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn test_parse_user_non_array_content_not_emitted() {
+        // content is a string, not array → blocks stays empty, no UserTurn emitted
+        let line = r#"{"type":"user","message":{"role":"user","content":"string not array"},"session_id":"s","uuid":"u"}"#;
+        let messages = parse_str(line).unwrap();
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn test_parse_assistant_no_message_field() {
+        // assistant record with no message field → nothing emitted
+        let line = r#"{"type":"assistant","session_id":"s","uuid":"u"}"#;
+        let messages = parse_str(line).unwrap();
+        assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn test_parse_user_no_message_field() {
+        // user record with no message field → nothing emitted
+        let line = r#"{"type":"user","session_id":"s","uuid":"u"}"#;
+        let messages = parse_str(line).unwrap();
+        assert!(messages.is_empty());
+    }
 }

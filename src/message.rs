@@ -603,4 +603,86 @@ mod tests {
         // Summary contains first 8 chars of tool_use_id
         assert!(items[0].summary.contains("toolu-ab"));
     }
+
+    #[test]
+    fn test_tool_result_content_raw_from_non_array_value() {
+        // content is a JSON object (not string or array) → Raw variant
+        let v = json!({
+            "type": "tool_result",
+            "tool_use_id": "t6",
+            "content": {"key": "value"}
+        });
+        let block = ContentBlock::from_value(&v).unwrap();
+        match block {
+            ContentBlock::ToolResult { content, .. } => match content {
+                ToolResultContent::Raw(_) => {}
+                _ => panic!("Expected Raw"),
+            },
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn test_tool_result_content_raw_from_mixed_array() {
+        // array with items that are neither tool_reference nor text → Raw(Array)
+        let v = json!({
+            "type": "tool_result",
+            "tool_use_id": "t7",
+            "content": [
+                {"type": "image", "url": "http://example.com/img.png"}
+            ]
+        });
+        let block = ContentBlock::from_value(&v).unwrap();
+        match block {
+            ContentBlock::ToolResult { content, .. } => match content {
+                ToolResultContent::Raw(_) => {}
+                _ => panic!("Expected Raw"),
+            },
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn test_display_item_tool_result_raw_content() {
+        let msg = LogicalMessage::UserTurn {
+            blocks: vec![ContentBlock::ToolResult {
+                tool_use_id: "toolu-raw12".to_string(),
+                content: ToolResultContent::Raw(json!({"status": "ok"})),
+                is_error: false,
+            }],
+        };
+        let items = DisplayItem::from_logical(&msg);
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].role, Role::ToolResult);
+        assert!(items[0].detail.contains("status"));
+    }
+
+    #[test]
+    fn test_display_item_tool_result_references_content() {
+        let msg = LogicalMessage::UserTurn {
+            blocks: vec![ContentBlock::ToolResult {
+                tool_use_id: "toolu-ref123".to_string(),
+                content: ToolResultContent::References(vec!["Bash".to_string(), "Read".to_string()]),
+                is_error: false,
+            }],
+        };
+        let items = DisplayItem::from_logical(&msg);
+        assert_eq!(items.len(), 1);
+        assert!(items[0].summary.contains("Bash"));
+        assert!(items[0].detail.contains("Read"));
+    }
+
+    #[test]
+    fn test_tool_use_id_shorter_than_8_chars() {
+        // tool_use_id shorter than 8 chars — uses the full id in summary
+        let msg = LogicalMessage::UserTurn {
+            blocks: vec![ContentBlock::ToolResult {
+                tool_use_id: "short".to_string(),
+                content: ToolResultContent::Text("ok".to_string()),
+                is_error: false,
+            }],
+        };
+        let items = DisplayItem::from_logical(&msg);
+        assert!(items[0].summary.contains("short"));
+    }
 }

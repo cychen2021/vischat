@@ -68,3 +68,29 @@ fn run_tui(items: Vec<DisplayItem>, file_path: String) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[test]
+    fn test_cli_parses_file_arg() {
+        let cli = Cli::try_parse_from(["vischat", "some/file.jsonl"]).unwrap();
+        assert_eq!(cli.file, "some/file.jsonl");
+    }
+
+    #[test]
+    fn test_cli_missing_file_arg_errors() {
+        assert!(Cli::try_parse_from(["vischat"]).is_err());
+    }
+
+    #[test]
+    fn test_cli_help_flag_errors_with_help_exit() {
+        // --help causes clap to surface Err with kind DisplayHelp
+        match Cli::try_parse_from(["vischat", "--help"]) {
+            Ok(_) => panic!("expected error"),
+            Err(e) => assert_eq!(e.kind(), clap::error::ErrorKind::DisplayHelp),
+        }
+    }
+}
