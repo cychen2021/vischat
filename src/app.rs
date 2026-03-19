@@ -9,6 +9,8 @@ pub struct AppState {
     pub expanded: bool,
     pub quit: bool,
     pub file_path: String,
+    /// Visible list rows (excluding borders), updated each frame by the renderer.
+    pub list_height: usize,
 }
 
 impl AppState {
@@ -22,6 +24,7 @@ impl AppState {
             expanded: false,
             quit: false,
             file_path,
+            list_height: 10,
         }
     }
 
@@ -83,6 +86,28 @@ impl AppState {
             self.detail_scroll = 0;
             self.expanded = false;
         }
+    }
+
+    pub fn move_half_page_down(&mut self) {
+        let step = (self.list_height / 2).max(1);
+        let count = self.navigable_count();
+        if count == 0 {
+            return;
+        }
+        // Move both cursor and scroll by the same step so the cursor holds
+        // its relative screen position (vim Ctrl-d behaviour).
+        self.selected = (self.selected + step).min(count - 1);
+        self.list_scroll = (self.list_scroll + step).min(self.selected);
+        self.detail_scroll = 0;
+        self.expanded = false;
+    }
+
+    pub fn move_half_page_up(&mut self) {
+        let step = (self.list_height / 2).max(1);
+        self.selected = self.selected.saturating_sub(step);
+        self.list_scroll = self.list_scroll.saturating_sub(step);
+        self.detail_scroll = 0;
+        self.expanded = false;
     }
 
     /// Ensure list_scroll keeps selected item visible given the list pane height.

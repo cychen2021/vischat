@@ -27,15 +27,15 @@ pub fn handle_key(state: &mut AppState, key: KeyEvent) {
             state.detail_scroll = 0;
         }
 
-        // Detail pane scroll
+        // Half-page cursor movement (vim Ctrl-d/u)
         // Some terminals send Ctrl+D/U as CONTROL+char, others as raw control chars \x04/\x15
         (KeyModifiers::CONTROL, KeyCode::Char('d'))
         | (KeyModifiers::NONE, KeyCode::Char('\x04')) => {
-            state.detail_scroll = state.detail_scroll.saturating_add(10);
+            state.move_half_page_down();
         }
         (KeyModifiers::CONTROL, KeyCode::Char('u'))
         | (KeyModifiers::NONE, KeyCode::Char('\x15')) => {
-            state.detail_scroll = state.detail_scroll.saturating_sub(10);
+            state.move_half_page_up();
         }
 
         // Expand/collapse inline
@@ -175,49 +175,60 @@ mod tests {
     }
 
     #[test]
-    fn test_ctrl_d_raw_char() {
-        let mut state = make_state(2);
+    fn test_ctrl_d_raw_char_moves_cursor() {
+        let mut state = make_state(20);
+        state.list_height = 10; // half-page = 5
         handle_key(&mut state, key(KeyCode::Char('\x04')));
-        assert_eq!(state.detail_scroll, 10);
+        assert_eq!(state.selected, 5);
     }
 
     #[test]
-    fn test_ctrl_u_raw_char() {
-        let mut state = make_state(2);
-        state.detail_scroll = 20;
+    fn test_ctrl_u_raw_char_moves_cursor() {
+        let mut state = make_state(20);
+        state.list_height = 10;
+        state.selected = 10;
+        state.list_scroll = 8;
         handle_key(&mut state, key(KeyCode::Char('\x15')));
-        assert_eq!(state.detail_scroll, 10);
+        assert_eq!(state.selected, 5);
     }
 
     #[test]
-    fn test_ctrl_d_scrolls_detail_down() {
-        let mut state = make_state(2);
+    fn test_ctrl_d_scrolls_screen_and_cursor() {
+        let mut state = make_state(20);
+        state.list_height = 10; // half-page = 5
         handle_key(&mut state, ctrl_key(KeyCode::Char('d')));
-        assert_eq!(state.detail_scroll, 10);
+        assert_eq!(state.selected, 5);
+        assert_eq!(state.list_scroll, 5);
     }
 
     #[test]
-    fn test_ctrl_d_accumulates() {
-        let mut state = make_state(2);
+    fn test_ctrl_d_clamps_at_last() {
+        let mut state = make_state(5);
+        state.list_height = 20; // half-page = 10, but only 5 items
         handle_key(&mut state, ctrl_key(KeyCode::Char('d')));
-        handle_key(&mut state, ctrl_key(KeyCode::Char('d')));
-        assert_eq!(state.detail_scroll, 20);
+        assert_eq!(state.selected, 4);
     }
 
     #[test]
-    fn test_ctrl_u_scrolls_detail_up() {
-        let mut state = make_state(2);
-        state.detail_scroll = 20;
+    fn test_ctrl_u_scrolls_screen_and_cursor() {
+        let mut state = make_state(20);
+        state.list_height = 10; // half-page = 5
+        state.selected = 10;
+        state.list_scroll = 8;
         handle_key(&mut state, ctrl_key(KeyCode::Char('u')));
-        assert_eq!(state.detail_scroll, 10);
+        assert_eq!(state.selected, 5);
+        assert_eq!(state.list_scroll, 3);
     }
 
     #[test]
     fn test_ctrl_u_saturates_at_zero() {
-        let mut state = make_state(2);
-        state.detail_scroll = 5;
+        let mut state = make_state(5);
+        state.list_height = 10;
+        state.selected = 2;
+        state.list_scroll = 1;
         handle_key(&mut state, ctrl_key(KeyCode::Char('u')));
-        assert_eq!(state.detail_scroll, 0);
+        assert_eq!(state.selected, 0);
+        assert_eq!(state.list_scroll, 0);
     }
 
     #[test]

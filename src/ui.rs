@@ -22,6 +22,7 @@ pub fn draw(frame: &mut Frame, state: &mut AppState) {
         let status_area = chunks[1];
 
         let list_height = list_area.height.saturating_sub(2) as usize;
+        state.list_height = list_height;
         state.clamp_scroll(list_height);
 
         draw_list_expanded(frame, state, list_area);
@@ -42,6 +43,7 @@ pub fn draw(frame: &mut Frame, state: &mut AppState) {
         let status_area = chunks[2];
 
         let list_height = list_area.height.saturating_sub(2) as usize;
+        state.list_height = list_height;
         state.clamp_scroll(list_height);
 
         draw_list(frame, state, list_area);
