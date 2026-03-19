@@ -157,17 +157,21 @@ fn draw_list_expanded(frame: &mut Frame, state: &AppState, area: ratatui::layout
                 .bg(Color::DarkGray)
                 .add_modifier(Modifier::BOLD);
             let badge_span = Span::styled(format!("- {}", raw_badge), sel_style);
-            let summary_span = Span::styled(item.summary.clone(), sel_style);
+            let header_text = item
+                .detail
+                .lines()
+                .next()
+                .unwrap_or(&item.summary)
+                .to_string();
+            let summary_span = Span::styled(header_text, sel_style);
             lines.push(Line::from(vec![badge_span, summary_span]));
             if lines.len() >= area_height {
                 break;
             }
-            for (j, content_line) in item.detail.lines().enumerate() {
-                if j >= state.detail_scroll {
-                    lines.push(Line::from(format!("  {}", content_line)));
-                    if lines.len() >= area_height {
-                        break 'outer;
-                    }
+            for content_line in item.detail.lines().skip(state.detail_scroll.saturating_add(1)) {
+                lines.push(Line::from(format!("  {}", content_line)));
+                if lines.len() >= area_height {
+                    break 'outer;
                 }
             }
         } else if folded {
