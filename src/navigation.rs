@@ -21,7 +21,7 @@ pub fn handle_key(state: &mut AppState, key: KeyEvent) {
             state.detail_scroll = 0;
         }
         (KeyModifiers::NONE, KeyCode::Char('G')) => {
-            let last = state.visible_count().saturating_sub(1);
+            let last = state.navigable_count().saturating_sub(1);
             state.selected = last;
             state.detail_scroll = 0;
         }
@@ -43,7 +43,7 @@ pub fn handle_key(state: &mut AppState, key: KeyEvent) {
         (KeyModifiers::NONE, KeyCode::Char('t')) => {
             state.show_thinking = !state.show_thinking;
             // Clamp selection if items changed
-            let count = state.visible_count();
+            let count = state.navigable_count();
             if count > 0 && state.selected >= count {
                 state.selected = count - 1;
             }

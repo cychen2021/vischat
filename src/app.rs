@@ -30,24 +30,43 @@ impl AppState {
         self.detail_scroll = 0;
     }
 
-    /// Returns items filtered by show_thinking
-    pub fn visible_items(&self) -> Vec<&DisplayItem> {
+    /// Returns items j/k navigation can land on (excludes thinking when folded).
+    pub fn navigable_items(&self) -> Vec<&DisplayItem> {
         self.all_items
             .iter()
             .filter(|item| self.show_thinking || item.role != Role::Thinking)
             .collect()
     }
 
-    pub fn visible_count(&self) -> usize {
-        self.visible_items().len()
+    /// Returns all items for display (thinking rows appear folded when `show_thinking` is false).
+    pub fn list_items(&self) -> &[DisplayItem] {
+        &self.all_items
+    }
+
+    pub fn navigable_count(&self) -> usize {
+        self.all_items
+            .iter()
+            .filter(|item| self.show_thinking || item.role != Role::Thinking)
+            .count()
     }
 
     pub fn selected_item(&self) -> Option<&DisplayItem> {
-        self.visible_items().into_iter().nth(self.selected)
+        self.all_items
+            .iter()
+            .filter(|item| self.show_thinking || item.role != Role::Thinking)
+            .nth(self.selected)
+    }
+
+    /// Position of the selected navigable item within `all_items`.
+    pub fn selected_list_index(&self) -> Option<usize> {
+        let sel = self.selected_item()?;
+        self.all_items
+            .iter()
+            .position(|item| std::ptr::eq(item, sel))
     }
 
     pub fn move_down(&mut self) {
-        let count = self.visible_count();
+        let count = self.navigable_count();
         if count == 0 {
             return;
         }
@@ -71,11 +90,12 @@ impl AppState {
         if list_height == 0 {
             return;
         }
-        if self.selected < self.list_scroll {
-            self.list_scroll = self.selected;
+        let list_pos = self.selected_list_index().unwrap_or(0);
+        if list_pos < self.list_scroll {
+            self.list_scroll = list_pos;
         }
-        if self.selected >= self.list_scroll + list_height {
-            self.list_scroll = self.selected - list_height + 1;
+        if list_pos >= self.list_scroll + list_height {
+            self.list_scroll = list_pos - list_height + 1;
         }
     }
 }
@@ -110,35 +130,90 @@ mod tests {
     }
 
     #[test]
-    fn test_visible_items_hides_thinking_by_default() {
+    fn test_navigable_items_hides_thinking_by_default() {
         let items = vec![
             make_item(Role::Assistant),
             make_item(Role::Thinking),
             make_item(Role::ToolUse),
         ];
         let state = AppState::new(items, "f".to_string());
-        let visible = state.visible_items();
-        assert_eq!(visible.len(), 2);
-        assert!(visible.iter().all(|i| i.role != Role::Thinking));
+        let nav = state.navigable_items();
+        assert_eq!(nav.len(), 2);
+        assert!(nav.iter().all(|i| i.role != Role::Thinking));
     }
 
     #[test]
-    fn test_visible_items_shows_thinking_when_enabled() {
+    fn test_navigable_items_shows_thinking_when_enabled() {
         let items = vec![make_item(Role::Assistant), make_item(Role::Thinking)];
         let mut state = AppState::new(items, "f".to_string());
         state.show_thinking = true;
-        assert_eq!(state.visible_items().len(), 2);
+        assert_eq!(state.navigable_items().len(), 2);
     }
 
     #[test]
-    fn test_visible_count_excludes_thinking() {
+    fn test_navigable_count_excludes_thinking() {
         let items = vec![
             make_item(Role::Assistant),
             make_item(Role::Thinking),
             make_item(Role::Assistant),
         ];
         let state = AppState::new(items, "f".to_string());
-        assert_eq!(state.visible_count(), 2);
+        assert_eq!(state.navigable_count(), 2);
+    }
+
+    #[test]
+    fn test_list_items_always_includes_thinking() {
+        let items = vec![
+            make_item(Role::Assistant),
+            make_item(Role::Thinking),
+            make_item(Role::ToolUse),
+        ];
+        let state = AppState::new(items, "f".to_string());
+        assert_eq!(state.list_items().len(), 3);
+        let mut state2 = AppState::new(
+            vec![make_item(Role::Assistant), make_item(Role::Thinking)],
+            "f".to_string(),
+        );
+        state2.show_thinking = true;
+        assert_eq!(state2.list_items().len(), 2);
+    }
+
+    #[test]
+    fn test_selected_list_index_skips_folded_thinking() {
+        // items: Assistant, Thinking, Assistant
+        // show_thinking=false → navigable: [0, 2]; selected=1 → all_items index 2
+        let items = vec![
+            make_item(Role::Assistant),
+            make_item(Role::Thinking),
+            make_item(Role::Assistant),
+        ];
+        let mut state = AppState::new(items, "f".to_string());
+        state.selected = 1; // second navigable = third all_items
+        assert_eq!(state.selected_list_index(), Some(2));
+    }
+
+    #[test]
+    fn test_selected_list_index_none_on_empty() {
+        let state = make_state(0);
+        assert!(state.selected_list_index().is_none());
+    }
+
+    #[test]
+    fn test_clamp_scroll_with_folded_thinking_ahead() {
+        // items: Assistant, Thinking, Assistant, Assistant, Assistant
+        // show_thinking=false → navigable indices in all_items: [0,2,3,4]
+        // selected navigable=3 → all_items index 4
+        let items = vec![
+            make_item(Role::Assistant),
+            make_item(Role::Thinking),
+            make_item(Role::Assistant),
+            make_item(Role::Assistant),
+            make_item(Role::Assistant),
+        ];
+        let mut state = AppState::new(items, "f".to_string());
+        state.selected = 3;
+        state.clamp_scroll(3); // list_pos=4, need scroll so 4 < scroll+3 → scroll=2
+        assert_eq!(state.list_scroll, 2);
     }
 
     #[test]
