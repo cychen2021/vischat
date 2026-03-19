@@ -47,7 +47,9 @@ impl AppState {
     /// Position of the selected navigable item within `all_items`.
     pub fn selected_list_index(&self) -> Option<usize> {
         let sel = self.selected_item()?;
-        self.all_items.iter().position(|item| std::ptr::eq(item, sel))
+        self.all_items
+            .iter()
+            .position(|item| std::ptr::eq(item, sel))
     }
 
     pub fn move_down(&mut self) {
