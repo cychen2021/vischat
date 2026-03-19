@@ -20,17 +20,21 @@ pub fn handle_key(state: &mut AppState, key: KeyEvent) {
             state.list_scroll = 0;
             state.detail_scroll = 0;
         }
-        (KeyModifiers::NONE, KeyCode::Char('G')) => {
+        (KeyModifiers::NONE, KeyCode::Char('G'))
+        | (KeyModifiers::SHIFT, KeyCode::Char('G')) => {
             let last = state.navigable_count().saturating_sub(1);
             state.selected = last;
             state.detail_scroll = 0;
         }
 
         // Detail pane scroll
-        (KeyModifiers::CONTROL, KeyCode::Char('d')) => {
+        // Some terminals send Ctrl+D/U as CONTROL+char, others as raw control chars \x04/\x15
+        (KeyModifiers::CONTROL, KeyCode::Char('d'))
+        | (KeyModifiers::NONE, KeyCode::Char('\x04')) => {
             state.detail_scroll = state.detail_scroll.saturating_add(10);
         }
-        (KeyModifiers::CONTROL, KeyCode::Char('u')) => {
+        (KeyModifiers::CONTROL, KeyCode::Char('u'))
+        | (KeyModifiers::NONE, KeyCode::Char('\x15')) => {
             state.detail_scroll = state.detail_scroll.saturating_sub(10);
         }
 
@@ -157,6 +161,32 @@ mod tests {
         handle_key(&mut state, key(KeyCode::Char('G')));
         assert_eq!(state.selected, 4);
         assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn test_jump_to_last_g_shift() {
+        let mut state = make_state(5);
+        handle_key(
+            &mut state,
+            KeyEvent::new(KeyCode::Char('G'), KeyModifiers::SHIFT),
+        );
+        assert_eq!(state.selected, 4);
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn test_ctrl_d_raw_char() {
+        let mut state = make_state(2);
+        handle_key(&mut state, key(KeyCode::Char('\x04')));
+        assert_eq!(state.detail_scroll, 10);
+    }
+
+    #[test]
+    fn test_ctrl_u_raw_char() {
+        let mut state = make_state(2);
+        state.detail_scroll = 20;
+        handle_key(&mut state, key(KeyCode::Char('\x15')));
+        assert_eq!(state.detail_scroll, 10);
     }
 
     #[test]
