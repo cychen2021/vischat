@@ -6,6 +6,7 @@ pub struct AppState {
     pub list_scroll: usize,
     pub detail_scroll: usize,
     pub show_thinking: bool,
+    pub expanded: bool,
     pub quit: bool,
     pub file_path: String,
 }
@@ -18,9 +19,15 @@ impl AppState {
             list_scroll: 0,
             detail_scroll: 0,
             show_thinking: false,
+            expanded: false,
             quit: false,
             file_path,
         }
+    }
+
+    pub fn toggle_expand(&mut self) {
+        self.expanded = !self.expanded;
+        self.detail_scroll = 0;
     }
 
     /// Returns items j/k navigation can land on (excludes thinking when folded).
@@ -66,6 +73,7 @@ impl AppState {
         if self.selected + 1 < count {
             self.selected += 1;
             self.detail_scroll = 0;
+            self.expanded = false;
         }
     }
 
@@ -73,6 +81,7 @@ impl AppState {
         if self.selected > 0 {
             self.selected -= 1;
             self.detail_scroll = 0;
+            self.expanded = false;
         }
     }
 
@@ -275,6 +284,41 @@ mod tests {
     fn test_selected_item_none_when_empty() {
         let state = make_state(0);
         assert!(state.selected_item().is_none());
+    }
+
+    #[test]
+    fn test_toggle_expand_toggles_flag() {
+        let mut state = make_state(2);
+        assert!(!state.expanded);
+        state.toggle_expand();
+        assert!(state.expanded);
+        state.toggle_expand();
+        assert!(!state.expanded);
+    }
+
+    #[test]
+    fn test_toggle_expand_resets_detail_scroll() {
+        let mut state = make_state(2);
+        state.detail_scroll = 5;
+        state.toggle_expand();
+        assert_eq!(state.detail_scroll, 0);
+    }
+
+    #[test]
+    fn test_move_down_collapses_expansion() {
+        let mut state = make_state(3);
+        state.expanded = true;
+        state.move_down();
+        assert!(!state.expanded);
+    }
+
+    #[test]
+    fn test_move_up_collapses_expansion() {
+        let mut state = make_state(3);
+        state.selected = 1;
+        state.expanded = true;
+        state.move_up();
+        assert!(!state.expanded);
     }
 
     #[test]

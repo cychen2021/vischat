@@ -34,6 +34,11 @@ pub fn handle_key(state: &mut AppState, key: KeyEvent) {
             state.detail_scroll = state.detail_scroll.saturating_sub(10);
         }
 
+        // Expand/collapse inline
+        (KeyModifiers::NONE, KeyCode::Enter) | (KeyModifiers::NONE, KeyCode::Char(' ')) => {
+            state.toggle_expand();
+        }
+
         // Toggle thinking
         (KeyModifiers::NONE, KeyCode::Char('t')) => {
             state.show_thinking = !state.show_thinking;
@@ -200,6 +205,34 @@ mod tests {
         state.selected = 1; // pointing at thinking item
         handle_key(&mut state, key(KeyCode::Char('t'))); // hide thinking → count becomes 1
         assert_eq!(state.selected, 0); // clamped to last visible
+    }
+
+    #[test]
+    fn test_enter_toggles_expanded() {
+        let mut state = make_state(2);
+        assert!(!state.expanded);
+        handle_key(&mut state, key(KeyCode::Enter));
+        assert!(state.expanded);
+        handle_key(&mut state, key(KeyCode::Enter));
+        assert!(!state.expanded);
+    }
+
+    #[test]
+    fn test_space_toggles_expanded() {
+        let mut state = make_state(2);
+        assert!(!state.expanded);
+        handle_key(&mut state, key(KeyCode::Char(' ')));
+        assert!(state.expanded);
+        handle_key(&mut state, key(KeyCode::Char(' ')));
+        assert!(!state.expanded);
+    }
+
+    #[test]
+    fn test_enter_resets_detail_scroll() {
+        let mut state = make_state(2);
+        state.detail_scroll = 10;
+        handle_key(&mut state, key(KeyCode::Enter));
+        assert_eq!(state.detail_scroll, 0);
     }
 
     #[test]

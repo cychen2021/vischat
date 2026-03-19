@@ -5,7 +5,7 @@ A terminal UI for browsing AI agent chat history stored in JSONL format (as prod
 ## Features
 
 - Color-coded role badges: `[SYS]`, `[ASST]`, `[THINK]`, `[TOOL>]`, `[TOOL<]`
-- Three-pane layout: message list, detail view, status bar
+- Three-pane layout: message list, detail view, status bar; or two-pane inline expansion
 - Vim-style navigation
 - Thinking blocks folded (shown as `...`) by default; press `t` to expand
 
@@ -23,8 +23,9 @@ cargo run -- <path-to-history.jsonl>
 | `k` / `↑` | Move up |
 | `g` | Jump to first item |
 | `G` | Jump to last item |
-| `Ctrl-d` | Scroll detail pane down |
-| `Ctrl-u` | Scroll detail pane up |
+| `Enter` / `Space` | Expand/collapse selected item inline |
+| `Ctrl-d` | Scroll detail pane (or expanded block) down |
+| `Ctrl-u` | Scroll detail pane (or expanded block) up |
 | `t` | Toggle thinking blocks (folded `...` ↔ expanded) |
 | `q` / `Esc` | Quit |
 
