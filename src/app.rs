@@ -23,7 +23,7 @@ impl AppState {
         }
     }
 
-    /// Returns items j/k navigation can land on (excludes thinking when hidden).
+    /// Returns items j/k navigation can land on (excludes thinking when folded).
     pub fn navigable_items(&self) -> Vec<&DisplayItem> {
         self.all_items
             .iter()
@@ -31,17 +31,23 @@ impl AppState {
             .collect()
     }
 
-    /// Returns all items for display (thinking shown folded when hidden).
-    pub fn list_items(&self) -> Vec<&DisplayItem> {
-        self.all_items.iter().collect()
+    /// Returns all items for display (thinking rows appear folded when `show_thinking` is false).
+    pub fn list_items(&self) -> &[DisplayItem] {
+        &self.all_items
     }
 
     pub fn navigable_count(&self) -> usize {
-        self.navigable_items().len()
+        self.all_items
+            .iter()
+            .filter(|item| self.show_thinking || item.role != Role::Thinking)
+            .count()
     }
 
     pub fn selected_item(&self) -> Option<&DisplayItem> {
-        self.navigable_items().into_iter().nth(self.selected)
+        self.all_items
+            .iter()
+            .filter(|item| self.show_thinking || item.role != Role::Thinking)
+            .nth(self.selected)
     }
 
     /// Position of the selected navigable item within `all_items`.

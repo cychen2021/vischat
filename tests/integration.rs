@@ -125,14 +125,14 @@ fn make_app() -> AppState {
 }
 
 #[test]
-fn test_app_visible_count_hides_thinking_by_default() {
+fn test_app_navigable_count_folds_thinking_by_default() {
     let app = make_app();
-    // 5 items total, 1 thinking hidden → 4 visible
+    // 5 items total, 1 thinking folded → 4 navigable
     assert_eq!(app.navigable_count(), 4);
 }
 
 #[test]
-fn test_app_visible_count_shows_all_with_thinking() {
+fn test_app_navigable_count_shows_all_with_thinking() {
     let mut app = make_app();
     app.show_thinking = true;
     assert_eq!(app.navigable_count(), 5);
