@@ -227,9 +227,19 @@ mod tests {
         let mut state = make_state(0);
         state.all_items = vec![
             make_item(), // 0 Assistant
-            DisplayItem { role: Role::Thinking, badge: "[T]", summary: "t".to_string(), detail: "d".to_string() },
+            DisplayItem {
+                role: Role::Thinking,
+                badge: "[T]",
+                summary: "t".to_string(),
+                detail: "d".to_string(),
+            },
             make_item(), // 2 Assistant
-            DisplayItem { role: Role::Thinking, badge: "[T]", summary: "t".to_string(), detail: "d".to_string() },
+            DisplayItem {
+                role: Role::Thinking,
+                badge: "[T]",
+                summary: "t".to_string(),
+                detail: "d".to_string(),
+            },
             make_item(), // 4 Assistant
         ];
         state.show_thinking = false;
