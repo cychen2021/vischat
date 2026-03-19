@@ -168,7 +168,7 @@ fn draw_list_expanded(frame: &mut Frame, state: &AppState, area: ratatui::layout
             if lines.len() >= area_height {
                 break;
             }
-            for content_line in item.detail.lines().skip(1 + state.detail_scroll) {
+            for content_line in item.detail.lines().skip(state.detail_scroll.saturating_add(1)) {
                 lines.push(Line::from(format!("  {}", content_line)));
                 if lines.len() >= area_height {
                     break 'outer;
