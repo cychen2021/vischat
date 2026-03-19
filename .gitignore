@@ -122,3 +122,4 @@ $RECYCLE.BIN/
 
 x_*
 tmp/
+!.vscode/*.instructions.md
