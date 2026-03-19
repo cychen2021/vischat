@@ -31,4 +31,4 @@ expression: "render_ui(&mut state, 100, 30)"
 │                                                                                                  │
 │                                                                                                  │
 └──────────────────────────────────────────────────────────────────────────────────────────────────┘
- j/k:move  g/G:first/last  Ctrl-d/u:scroll  t:thinking  q:quit    4/4
+ j/k:move  g/G:first/last  Ctrl-d/u:scroll  Enter:expand  t:thinking  q:quit    4/4

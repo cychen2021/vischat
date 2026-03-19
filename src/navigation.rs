@@ -34,6 +34,11 @@ pub fn handle_key(state: &mut AppState, key: KeyEvent) {
             state.detail_scroll = state.detail_scroll.saturating_sub(10);
         }
 
+        // Expand/collapse inline
+        (KeyModifiers::NONE, KeyCode::Enter) | (KeyModifiers::NONE, KeyCode::Char(' ')) => {
+            state.toggle_expand();
+        }
+
         // Toggle thinking
         (KeyModifiers::NONE, KeyCode::Char('t')) => {
             state.show_thinking = !state.show_thinking;

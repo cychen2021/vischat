@@ -6,6 +6,7 @@ pub struct AppState {
     pub list_scroll: usize,
     pub detail_scroll: usize,
     pub show_thinking: bool,
+    pub expanded: bool,
     pub quit: bool,
     pub file_path: String,
 }
@@ -18,9 +19,15 @@ impl AppState {
             list_scroll: 0,
             detail_scroll: 0,
             show_thinking: false,
+            expanded: false,
             quit: false,
             file_path,
         }
+    }
+
+    pub fn toggle_expand(&mut self) {
+        self.expanded = !self.expanded;
+        self.detail_scroll = 0;
     }
 
     /// Returns items filtered by show_thinking
@@ -47,6 +54,7 @@ impl AppState {
         if self.selected + 1 < count {
             self.selected += 1;
             self.detail_scroll = 0;
+            self.expanded = false;
         }
     }
 
@@ -54,6 +62,7 @@ impl AppState {
         if self.selected > 0 {
             self.selected -= 1;
             self.detail_scroll = 0;
+            self.expanded = false;
         }
     }
 

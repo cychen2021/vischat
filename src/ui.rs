@@ -12,27 +12,42 @@ use crate::message::Role;
 pub fn draw(frame: &mut Frame, state: &mut AppState) {
     let size = frame.area();
 
-    // Layout: list (60%), detail (35%), status (1 line)
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(60),
-            Constraint::Min(3),
-            Constraint::Length(1),
-        ])
-        .split(size);
+    if state.expanded {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(3), Constraint::Length(1)])
+            .split(size);
 
-    let list_area = chunks[0];
-    let detail_area = chunks[1];
-    let status_area = chunks[2];
+        let list_area = chunks[0];
+        let status_area = chunks[1];
 
-    let list_height = list_area.height.saturating_sub(2) as usize; // minus borders
+        let list_height = list_area.height.saturating_sub(2) as usize;
+        state.clamp_scroll(list_height);
 
-    state.clamp_scroll(list_height);
+        draw_list_expanded(frame, state, list_area);
+        draw_status(frame, state, status_area);
+    } else {
+        // Layout: list (60%), detail (35%), status (1 line)
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage(60),
+                Constraint::Min(3),
+                Constraint::Length(1),
+            ])
+            .split(size);
 
-    draw_list(frame, state, list_area);
-    draw_detail(frame, state, detail_area);
-    draw_status(frame, state, status_area);
+        let list_area = chunks[0];
+        let detail_area = chunks[1];
+        let status_area = chunks[2];
+
+        let list_height = list_area.height.saturating_sub(2) as usize;
+        state.clamp_scroll(list_height);
+
+        draw_list(frame, state, list_area);
+        draw_detail(frame, state, detail_area);
+        draw_status(frame, state, status_area);
+    }
 }
 
 fn badge_style(role: &Role) -> Style {
@@ -103,6 +118,58 @@ fn draw_list(frame: &mut Frame, state: &mut AppState, area: ratatui::layout::Rec
     frame.render_stateful_widget(list, area, &mut list_state);
 }
 
+fn draw_list_expanded(frame: &mut Frame, state: &AppState, area: ratatui::layout::Rect) {
+    let visible = state.visible_items();
+    let selected = state.selected;
+    let scroll = state.list_scroll;
+    let area_height = area.height.saturating_sub(2) as usize; // minus borders
+
+    let mut lines: Vec<Line> = Vec::new();
+
+    'outer: for (i, item) in visible.iter().enumerate().skip(scroll) {
+        let badge_span = Span::styled(format!("{:<8}", item.badge), badge_style(&item.role));
+        if i == selected {
+            let summary_style = Style::default()
+                .fg(Color::White)
+                .bg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD);
+            let summary_span = Span::styled(item.summary.clone(), summary_style);
+            lines.push(Line::from(vec![badge_span, summary_span]));
+            if lines.len() >= area_height {
+                break;
+            }
+            for (j, content_line) in item.detail.lines().enumerate() {
+                if j >= state.detail_scroll {
+                    lines.push(Line::from(format!("  {}", content_line)));
+                    if lines.len() >= area_height {
+                        break 'outer;
+                    }
+                }
+            }
+        } else {
+            let summary_style = Style::default().fg(Color::Gray);
+            let summary_span = Span::styled(item.summary.clone(), summary_style);
+            lines.push(Line::from(vec![badge_span, summary_span]));
+            if lines.len() >= area_height {
+                break;
+            }
+        }
+    }
+
+    let thinking_hint = if state.show_thinking {
+        " [thinking visible]"
+    } else {
+        " [thinking hidden — press t]"
+    };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(format!(" vischat · {} {} [expanded]", state.file_path, thinking_hint));
+
+    let para = Paragraph::new(lines).block(block);
+    frame.render_widget(para, area);
+}
+
 fn draw_detail(frame: &mut Frame, state: &AppState, area: ratatui::layout::Rect) {
     let (title, content) = match state.selected_item() {
         None => ("(no selection)".to_string(), String::new()),
@@ -143,7 +210,7 @@ fn draw_status(frame: &mut Frame, state: &AppState, area: ratatui::layout::Rect)
         format!("{}/{}", state.selected + 1, total)
     };
     let status = format!(
-        " j/k:move  g/G:first/last  Ctrl-d/u:scroll  t:thinking  q:quit    {}",
+        " j/k:move  g/G:first/last  Ctrl-d/u:scroll  Enter:expand  t:thinking  q:quit    {}",
         pos
     );
     let para = Paragraph::new(status).style(Style::default().fg(Color::DarkGray));
