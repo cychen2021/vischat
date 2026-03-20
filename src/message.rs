@@ -287,8 +287,9 @@ fn block_to_display_item(block: &ContentBlock) -> DisplayItem {
 
 fn first_line(s: &str, max_len: usize) -> String {
     let line = s.lines().next().unwrap_or("").trim();
-    if line.len() > max_len {
-        format!("{}…", &line[..max_len])
+    if line.chars().count() > max_len {
+        let truncated: String = line.chars().take(max_len).collect();
+        format!("{}…", truncated)
     } else {
         line.to_string()
     }
