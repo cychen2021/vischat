@@ -30,22 +30,20 @@ impl AppState {
     }
 
     pub fn reload(&mut self) {
-        match parser::parse_file(&self.file_path) {
-            Ok(logical_messages) => {
-                self.all_items = logical_messages
-                    .iter()
-                    .flat_map(DisplayItem::from_logical)
-                    .collect();
-                let max = self.navigable_count().saturating_sub(1);
-                if self.selected > max {
-                    self.selected = max;
-                }
-                self.detail_scroll = 0;
-                self.list_scroll = 0;
-                let h = self.list_height;
-                self.clamp_scroll(h);
+        // Silently ignore reload errors (file may be mid-write)
+        if let Ok(logical_messages) = parser::parse_file(&self.file_path) {
+            self.all_items = logical_messages
+                .iter()
+                .flat_map(DisplayItem::from_logical)
+                .collect();
+            let max = self.navigable_count().saturating_sub(1);
+            if self.selected > max {
+                self.selected = max;
             }
-            Err(_) => {} // Silently ignore reload errors (file may be mid-write)
+            self.detail_scroll = 0;
+            self.list_scroll = 0;
+            let h = self.list_height;
+            self.clamp_scroll(h);
         }
     }
 
@@ -418,7 +416,10 @@ mod tests {
         let path = write_tmp_jsonl("app_reload_updates.jsonl", ASSISTANT_LINE);
         let mut state = AppState::new(vec![], path.to_string_lossy().into_owned());
         state.reload();
-        assert!(!state.all_items.is_empty(), "reload() should populate items");
+        assert!(
+            !state.all_items.is_empty(),
+            "reload() should populate items"
+        );
     }
 
     #[test]
