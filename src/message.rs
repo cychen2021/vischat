@@ -663,7 +663,10 @@ mod tests {
         let msg = LogicalMessage::UserTurn {
             blocks: vec![ContentBlock::ToolResult {
                 tool_use_id: "toolu-ref123".to_string(),
-                content: ToolResultContent::References(vec!["Bash".to_string(), "Read".to_string()]),
+                content: ToolResultContent::References(vec![
+                    "Bash".to_string(),
+                    "Read".to_string(),
+                ]),
                 is_error: false,
             }],
         };

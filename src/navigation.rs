@@ -20,8 +20,7 @@ pub fn handle_key(state: &mut AppState, key: KeyEvent) {
             state.list_scroll = 0;
             state.detail_scroll = 0;
         }
-        (KeyModifiers::NONE, KeyCode::Char('G'))
-        | (KeyModifiers::SHIFT, KeyCode::Char('G')) => {
+        (KeyModifiers::NONE, KeyCode::Char('G')) | (KeyModifiers::SHIFT, KeyCode::Char('G')) => {
             let last = state.navigable_count().saturating_sub(1);
             state.selected = last;
             state.detail_scroll = 0;

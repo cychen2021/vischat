@@ -401,7 +401,10 @@ mod tests {
 
     #[test]
     fn test_reload_invalid_path_is_noop() {
-        let mut state = AppState::new(vec![make_item(Role::Assistant)], "/nonexistent/path.jsonl".to_string());
+        let mut state = AppState::new(
+            vec![make_item(Role::Assistant)],
+            "/nonexistent/path.jsonl".to_string(),
+        );
         state.reload();
         assert_eq!(state.all_items.len(), 1);
     }
@@ -428,7 +431,10 @@ mod tests {
         // Reload from the example file in the project root
         let mut state = AppState::new(vec![], "example-history.jsonl".to_string());
         state.reload();
-        assert!(!state.all_items.is_empty(), "should load items from example-history.jsonl");
+        assert!(
+            !state.all_items.is_empty(),
+            "should load items from example-history.jsonl"
+        );
     }
 
     #[test]
