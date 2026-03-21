@@ -1,4 +1,5 @@
 use crate::message::{DisplayItem, Role};
+use crate::parser;
 
 pub struct AppState {
     pub all_items: Vec<DisplayItem>,
@@ -25,6 +26,26 @@ impl AppState {
             quit: false,
             file_path,
             list_height: 10,
+        }
+    }
+
+    pub fn reload(&mut self) {
+        match parser::parse_file(&self.file_path) {
+            Ok(logical_messages) => {
+                self.all_items = logical_messages
+                    .iter()
+                    .flat_map(DisplayItem::from_logical)
+                    .collect();
+                let max = self.navigable_count().saturating_sub(1);
+                if self.selected > max {
+                    self.selected = max;
+                }
+                self.detail_scroll = 0;
+                self.list_scroll = 0;
+                let h = self.list_height;
+                self.clamp_scroll(h);
+            }
+            Err(_) => {} // Silently ignore reload errors (file may be mid-write)
         }
     }
 
@@ -369,6 +390,59 @@ mod tests {
         state.list_scroll = 5;
         state.clamp_scroll(0);
         assert_eq!(state.list_scroll, 5);
+    }
+
+    // Minimal valid JSONL line used by reload tests.
+    const ASSISTANT_LINE: &str = r#"{"type":"assistant","message":{"id":"msg-001","role":"assistant","content":[{"type":"text","text":"Hello!"}]},"session_id":"sess-001","uuid":"uuid-asst"}"#;
+
+    fn write_tmp_jsonl(name: &str, content: &str) -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(name);
+        std::fs::write(&path, content).unwrap();
+        path
+    }
+
+    #[test]
+    fn test_reload_noop_on_missing_file() {
+        // reload() with a non-existent path leaves state unchanged.
+        let mut state = AppState::new(
+            vec![make_item(Role::Assistant)],
+            "/nonexistent/path.jsonl".to_string(),
+        );
+        state.reload();
+        assert_eq!(state.all_items.len(), 1);
+    }
+
+    #[test]
+    fn test_reload_updates_items_from_file() {
+        // Start empty, reload from a temp file with one assistant message.
+        let path = write_tmp_jsonl("app_reload_updates.jsonl", ASSISTANT_LINE);
+        let mut state = AppState::new(vec![], path.to_string_lossy().into_owned());
+        state.reload();
+        assert!(!state.all_items.is_empty(), "reload() should populate items");
+    }
+
+    #[test]
+    fn test_reload_clamps_selection() {
+        // State has 3 items; reload from a file with 1 item → selection clamped to 0.
+        let path = write_tmp_jsonl("app_reload_clamp.jsonl", ASSISTANT_LINE);
+        let mut state = make_state(3);
+        state.file_path = path.to_string_lossy().into_owned();
+        state.selected = 2;
+        state.reload();
+        assert_eq!(state.all_items.len(), 1);
+        assert_eq!(state.selected, 0);
+    }
+
+    #[test]
+    fn test_reload_resets_scroll() {
+        // reload() resets list_scroll and detail_scroll to 0.
+        let path = write_tmp_jsonl("app_reload_scroll.jsonl", ASSISTANT_LINE);
+        let mut state = AppState::new(vec![], path.to_string_lossy().into_owned());
+        state.list_scroll = 5;
+        state.detail_scroll = 3;
+        state.reload();
+        assert_eq!(state.list_scroll, 0);
+        assert_eq!(state.detail_scroll, 0);
     }
 
     #[test]
