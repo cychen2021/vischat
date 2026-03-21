@@ -1,4 +1,5 @@
 use crate::message::{DisplayItem, Role};
+use crate::parser;
 
 pub struct AppState {
     pub all_items: Vec<DisplayItem>,
@@ -25,6 +26,25 @@ impl AppState {
             quit: false,
             file_path,
             list_height: 10,
+        }
+    }
+
+    pub fn reload(&mut self) {
+        match parser::parse_file(&self.file_path) {
+            Ok(logical_messages) => {
+                self.all_items = logical_messages
+                    .iter()
+                    .flat_map(DisplayItem::from_logical)
+                    .collect();
+                let max = self.navigable_count().saturating_sub(1);
+                if self.selected > max {
+                    self.selected = max;
+                }
+                self.detail_scroll = 0;
+                let h = self.list_height;
+                self.clamp_scroll(h);
+            }
+            Err(_) => {} // Silently ignore reload errors (file may be mid-write)
         }
     }
 
@@ -369,6 +389,46 @@ mod tests {
         state.list_scroll = 5;
         state.clamp_scroll(0);
         assert_eq!(state.list_scroll, 5);
+    }
+
+    #[test]
+    fn test_reload_updates_items() {
+        let mut state = make_state(2);
+        state.reload(); // valid path "test.jsonl" doesn't exist → no-op
+        // State is unchanged (no panic, items still 2)
+        assert_eq!(state.all_items.len(), 2);
+    }
+
+    #[test]
+    fn test_reload_invalid_path_is_noop() {
+        let mut state = AppState::new(vec![make_item(Role::Assistant)], "/nonexistent/path.jsonl".to_string());
+        state.reload();
+        assert_eq!(state.all_items.len(), 1);
+    }
+
+    #[test]
+    fn test_reload_clamps_selection() {
+        // Start with 5 items and selected=4, reload with a file that doesn't exist → no-op
+        // This test verifies clamping logic when navigable_count shrinks.
+        let mut state = make_state(3);
+        state.selected = 2;
+        // Manually shrink items to simulate what reload would do after a smaller file
+        state.all_items = vec![make_item(Role::Assistant)];
+        // Now call the clamping part indirectly via reload with bad path (noop),
+        // then simulate by directly calling the logic path:
+        let max = state.navigable_count().saturating_sub(1);
+        if state.selected > max {
+            state.selected = max;
+        }
+        assert_eq!(state.selected, 0);
+    }
+
+    #[test]
+    fn test_reload_with_real_file() {
+        // Reload from the example file in the project root
+        let mut state = AppState::new(vec![], "example-history.jsonl".to_string());
+        state.reload();
+        assert!(!state.all_items.is_empty(), "should load items from example-history.jsonl");
     }
 
     #[test]

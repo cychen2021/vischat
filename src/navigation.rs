@@ -66,6 +66,8 @@ pub fn handle_key(state: &mut AppState, key: KeyEvent) {
             state.detail_scroll = 0;
         }
 
+        (KeyModifiers::NONE, KeyCode::Char('r')) => state.reload(),
+
         _ => {}
     }
 }

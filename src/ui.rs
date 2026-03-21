@@ -257,7 +257,7 @@ fn draw_status(frame: &mut Frame, state: &AppState, area: ratatui::layout::Rect)
         format!("{}/{}", state.selected + 1, total)
     };
     let status = format!(
-        " j/k:move  g/G:first/last  Ctrl-d/u:scroll  Enter/Space:expand  t:thinking  q:quit    {}",
+        " j/k:move  g/G:first/last  Ctrl-d/u:scroll  Enter/Space:expand  t:thinking  r:reload  q:quit    {}",
         pos
     );
     let para = Paragraph::new(status).style(Style::default().fg(Color::DarkGray));
